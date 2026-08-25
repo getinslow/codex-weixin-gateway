@@ -1,0 +1,5 @@
+node_modules/
+dist/
+gateway.json
+.data/
+*.log

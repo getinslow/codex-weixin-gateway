@@ -1,0 +1,8 @@
+This project contains source code adapted from Tencent's
+@tencent-weixin/openclaw-weixin package, version 2.4.6.
+
+Copyright (C) 2026 Tencent. All rights reserved.
+Licensed under the MIT License. See TENCENT-LICENSE.
+
+The Codex gateway/runtime integration is an independent adaptation and is not
+an official Tencent or OpenAI product.

@@ -1,0 +1,34 @@
+{
+  "stateDir": ".data",
+  "weixin": {
+    "accountId": "",
+    "allowAllUsers": false,
+    "allowedUserIds": [],
+    "replyOnError": true,
+    "longPollTimeoutMs": 35000,
+    "typingKeepaliveMs": 5000
+  },
+  "codex": {
+    "backend": "app-server",
+    "workingDirectory": ".",
+    "projectRoots": [".."],
+    "model": "gpt-5.6-sol",
+    "serviceTier": "default",
+    "switchableModels": ["gpt-5.6-sol", "gpt-5.6-terra"],
+    "modelReasoningEffort": "low",
+    "sandboxMode": "read-only",
+    "approvalPolicy": "never",
+    "networkAccessEnabled": false,
+    "turnTimeoutMs": 600000,
+    "appServerStartupTimeoutMs": 30000,
+    "promptPrefix": "你正在微信中回复用户。回答应直接、简洁，不要声称已经发送尚未发送的文件。"
+  },
+  "health": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "logging": {
+    "level": "INFO",
+    "console": true
+  }
+}
