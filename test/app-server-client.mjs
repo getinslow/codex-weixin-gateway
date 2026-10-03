@@ -105,6 +105,19 @@ try {
   });
   assert.equal(/thread=(\S+)/.exec(alphaAgain)?.[1], alphaThread);
 
+  const compoundText = "切换到alpha-project项目，然后查看README";
+  assert.equal(backend.handleControlCommand({ conversationKey: "account:user-a", text: compoundText }), undefined);
+  const compoundSettings = backend.snapshotSettings("account:user-a");
+  backend.handleControlCommand({ conversationKey: "account:user-a", text: "切回默认项目" });
+  const compoundReply = await backend.respond({
+    conversationKey: "account:user-a",
+    text: compoundText,
+    settings: compoundSettings,
+  });
+  assert.ok(compoundReply.includes(`cwd=${canonicalAlphaProject}`));
+  assert.equal(backend.snapshotSettings("account:user-a").projectIsDefault, true);
+  backend.handleControlCommand({ conversationKey: "account:user-a", text: "切换到alpha-project项目" });
+
   const generatedPath = path.join(canonicalAlphaProject, "fake-generated.png");
   fs.writeFileSync(
     generatedPath,

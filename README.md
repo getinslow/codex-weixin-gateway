@@ -1,6 +1,6 @@
 # Codex Weixin Gateway
 
-一个不依赖 OpenClaw 的微信渠道网关。微信协议层改编自腾讯发布的
+一个不依赖 OpenClaw 的微信渠道网关。当前版本 **v0.5.0**，更新记录见 [CHANGELOG.md](CHANGELOG.md)。微信协议层改编自腾讯发布的
 `@tencent-weixin/openclaw-weixin@2.4.6`，Agent 后端默认使用一个常驻的 Codex
 App Server；`@openai/codex-sdk` 仅作为可配置回退。
 
@@ -68,6 +68,21 @@ npm run dev
 `workspace-write`。不要为来自不可信联系人的机器人启用
 `danger-full-access` 或 `allowAllUsers`。
 
+需要通过微信跨目录读写时，在自己的 `gateway.json` 中配置完整访问模式，
+并将项目根目录替换成实际路径：
+
+```json
+"codex": {
+  "sandboxMode": "danger-full-access",
+  "approvalPolicy": "never",
+  "networkAccessEnabled": true,
+  "projectRoots": ["../projects"]
+}
+```
+
+配置示例中的字段应合并到现有 `codex` 对象。修改后重启网关；已有 Codex 会话
+恢复时会采用当前配置的权限。
+
 ## 配置
 
 配置文件默认为当前目录的 `gateway.json`。也可以使用：
@@ -82,11 +97,27 @@ node dist/main.js serve --config C:\path\to\gateway.json
 如需临时回退旧实现，可设置为 `sdk`。`codex.serviceTier` 默认为 `default`；设为
 `priority` 会请求更快的服务等级，并可能增加用量成本。
 
-`codex.projectRoots` 是允许按名称查找项目的根目录列表。项目选择只接受目录名，候选
+`codex.projectRoots` 是允许按名称查找项目的根目录列表。按名称查找的候选
 必须经过 realpath 和根目录边界校验；只有包含 `.git`、`package.json`、`pyproject.toml`
 等常见项目标记的目录才会进入候选，`projectRoots` 本身不会被整体授予写权限。
 
 ### 微信内切换项目
+
+可以直接说“切换到以太坊流动性项目”“帮我切到 ethdisc”，或
+“进入以太坊流动性项目，然后看看进展”。网关先保存项目选择，再把同一条消息里的
+后续任务交给该项目的 Codex 会话。回复会显示实际目录。
+
+项目匹配会使用目录名、`package.json` 中的名称、README 标题和
+`codex.projectAliases` 中配置的别名。比如在配置中加入：
+
+```json
+"projectAliases": {
+  "以太坊流动性": "../ethdisc"
+}
+```
+
+别名路径也可相对配置文件填写。匹配多个项目时会列出候选，等待用户指定；
+讨论切换方式、举例或否定切换不会修改项目。
 
 项目按微信会话持久化。切换后，后续普通消息以所选目录作为 Codex `cwd`；不同项目
 使用不同 thread，切回原项目会继续该项目之前的上下文：
@@ -94,12 +125,16 @@ node dist/main.js serve --config C:\path\to\gateway.json
 ```text
 /project                        查看当前项目
 /project codex-weixin-gateway   按目录名切换项目
+/project /完整路径/项目文件夹    按绝对路径切换项目
 /project default                切回默认项目
 ```
 
-项目名支持空格，但不接受盘符、斜杠或 `..` 路径。若受信任根目录下存在多个同名目录，
+项目名与完整路径支持空格，路径也支持 `~` 和 `~/`。在 `read-only` 或 `workspace-write`
+模式下，绝对路径仍须位于 `projectRoots` 内并包含项目标记；在显式启用
+`danger-full-access` 时，可以按完整路径选择任意现有文件夹，无需项目标记。
+若受信任根目录下存在多个同名目录，
 网关会拒绝猜测并保持当前项目不变。项目目录索引在网关启动时建立；新建或重命名项目后，
-重启网关即可按新名称选择。
+可直接按完整路径选择，或重启网关后按新名称选择。
 
 ### 微信内切换模型与推理强度
 

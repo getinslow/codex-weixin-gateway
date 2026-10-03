@@ -12,6 +12,7 @@
     "backend": "app-server",
     "workingDirectory": ".",
     "projectRoots": [".."],
+    "projectAliases": {},
     "model": "gpt-5.6-sol",
     "serviceTier": "default",
     "switchableModels": ["gpt-5.6-sol", "gpt-5.6-terra"],

@@ -145,7 +145,7 @@ export function loadConfigRouteTag(): string | undefined {
 }
 
 export function loadConfigBotAgent(): string | undefined {
-  return process.env.WEIXIN_BOT_AGENT?.trim() || "CodexWeixinGateway/0.4.0";
+  return process.env.WEIXIN_BOT_AGENT?.trim() || "CodexWeixinGateway/0.5.0";
 }
 
 export function resolveWeixinAccount(params: {

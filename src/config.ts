@@ -9,7 +9,7 @@ const WeixinSchema = z.object({
   baseUrl: z.url().default("https://ilinkai.weixin.qq.com"),
   cdnBaseUrl: z.url().default("https://novac2c.cdn.weixin.qq.com/c2c"),
   routeTag: z.union([z.string(), z.number()]).optional(),
-  botAgent: z.string().default("CodexWeixinGateway/0.4.0"),
+  botAgent: z.string().default("CodexWeixinGateway/0.5.0"),
   allowAllUsers: z.boolean().default(false),
   allowedUserIds: z.array(z.string().min(1)).default([]),
   replyOnError: z.boolean().default(true),
@@ -35,6 +35,7 @@ const CodexSchema = z.object({
   appServerStartupTimeoutMs: z.number().int().positive().default(30_000),
   additionalDirectories: z.array(z.string()).default([]),
   projectRoots: z.array(z.string()).default([]),
+  projectAliases: z.record(z.string().min(1), z.string().min(1)).default({}),
   promptPrefix: z.string().default(
     "你正在微信中回复用户。回答应直接、简洁，不要声称已经发送尚未发送的文件。",
   ),
@@ -56,7 +57,7 @@ const GatewaySchema = z.object({
     accountId: "",
     baseUrl: "https://ilinkai.weixin.qq.com",
     cdnBaseUrl: "https://novac2c.cdn.weixin.qq.com/c2c",
-    botAgent: "CodexWeixinGateway/0.4.0",
+    botAgent: "CodexWeixinGateway/0.5.0",
     allowAllUsers: false,
     allowedUserIds: [],
     replyOnError: true,
@@ -78,6 +79,7 @@ const GatewaySchema = z.object({
     appServerStartupTimeoutMs: 30_000,
     additionalDirectories: [],
     projectRoots: [],
+    projectAliases: {},
     promptPrefix: "你正在微信中回复用户。回答应直接、简洁，不要声称已经发送尚未发送的文件。",
   }),
   health: HealthSchema.default({ host: "127.0.0.1", port: 8787 }),
@@ -135,6 +137,11 @@ export function loadGatewayConfig(configArg?: string): GatewayConfig {
         absoluteFrom(configDir, entry),
       ),
       projectRoots,
+      projectAliases: Object.fromEntries(
+        Object.entries(parsed.codex.projectAliases).map(([name, directory]) =>
+          [name, absoluteFrom(configDir, directory)],
+        ),
+      ),
     },
   };
 

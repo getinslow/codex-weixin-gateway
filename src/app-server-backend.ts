@@ -80,7 +80,8 @@ export class CodexAppServerBackend implements AgentBackend {
   }
 
   async respond(request: AgentRequest): Promise<string> {
-    const commandResponse = this.handleControlCommand(request);
+    // Frozen settings mean the gateway has already handled the control part at intake.
+    const commandResponse = request.settings ? undefined : this.handleControlCommand(request);
     if (commandResponse !== undefined) return commandResponse;
 
     await this.#client.start();

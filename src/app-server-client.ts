@@ -129,7 +129,7 @@ export class AppServerClient {
           clientInfo: {
             name: "codex_weixin_gateway",
             title: "Codex Weixin Gateway",
-            version: "0.4.0",
+            version: "0.5.0",
           },
           capabilities: {
             experimentalApi: false,

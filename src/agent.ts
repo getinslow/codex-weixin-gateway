@@ -11,6 +11,7 @@ import {
   type ServiceTier,
 } from "./json-store.js";
 import { ProjectDirectoryResolver } from "./projects.js";
+import { projectSwitchIntent } from "./project-intent.js";
 import { logger } from "./weixin/util/logger.js";
 
 export type AgentProgressStage =
@@ -80,6 +81,8 @@ export class ConversationAgentSupport {
     this.#projects = new ProjectDirectoryResolver(
       config.codex.workingDirectory,
       config.codex.projectRoots,
+      config.codex.sandboxMode === "danger-full-access",
+      config.codex.projectAliases,
     );
   }
 
@@ -152,6 +155,18 @@ export class ConversationAgentSupport {
   }
 
   handleControlCommand(conversationKey: string, text: string): string | undefined {
+    const intent = projectSwitchIntent(text);
+    if (intent) {
+      const lookup = this.#projects.find(intent.selection);
+      // "打开 README" and switches of models or topics must remain ordinary requests.
+      if (intent.explicitProject || lookup.project || lookup.error === "ambiguous" || /^(?:默认|默认项目)$/u.test(intent.selection)) {
+        const reply = this.#switchProject(conversationKey, intent.selection);
+        return intent.hasFollowup && reply.startsWith("已切") ? undefined : reply;
+      }
+    }
+    if (/^(?:当前|现在|我|我们)?(?:在哪个项目|是哪个项目|用的是哪个项目)[？?。]?$/u.test(text.trim())) {
+      return this.#formatProject(conversationKey);
+    }
     const parts = text.trim().split(/\s+/);
     const command = parts[0]?.toLowerCase();
     const argument = parts.slice(1).join(" ").trim() || undefined;
@@ -215,26 +230,28 @@ export class ConversationAgentSupport {
 
     if (["/project", "/项目"].includes(command)) {
       if (!argument) return this.#formatProject(conversationKey);
-      if (["default", "reset"].includes(argument.toLowerCase()) || argument === "默认") {
-        this.#settings.setProject(conversationKey);
-        const project = this.settings(conversationKey);
-        return `已切回默认项目：${project.projectName}\n目录：${project.workingDirectory}\n下一条普通消息开始生效。`;
-      }
-      const lookup = this.#projects.findByName(argument);
-      if (lookup.error === "invalid-name") {
-        return "项目名无效；请只发送项目目录名，不要包含路径。";
-      }
-      if (lookup.error === "ambiguous") {
-        return `找到 ${lookup.matchCount} 个同名项目：${argument}\n为避免进入错误目录，未执行切换；请使用更唯一的项目名或缩小 projectRoots。`;
-      }
-      if (!lookup.project) {
-        return `未找到项目：${argument}`;
-      }
-      this.#settings.setProject(conversationKey, lookup.project.path);
-      return `已切换项目：${lookup.project.name}\n目录：${lookup.project.path}\n下一条普通消息开始生效。`;
+      return this.#switchProject(conversationKey, argument);
     }
 
     return undefined;
+  }
+
+  #switchProject(conversationKey: string, selection: string): string {
+    if (["default", "reset", "默认", "默认项目", "默认目录"].includes(selection.toLowerCase())) {
+      this.#settings.setProject(conversationKey);
+      const project = this.settings(conversationKey);
+      return `已切回默认项目：${project.projectName}\n目录：${project.workingDirectory}`;
+    }
+    const lookup = this.#projects.find(selection);
+    if (lookup.error === "invalid-name") return "没有识别到项目，请告诉我项目名称或目录。";
+    if (lookup.error === "ambiguous") {
+      const candidates = (lookup.candidates ?? []).slice(0, 8)
+        .map((project) => `${project.name}：${project.path}`).join("\n");
+      return `找到 ${lookup.matchCount} 个同名或相关项目：${selection}\n${candidates}\n请告诉我你要切换到哪一个。`;
+    }
+    if (!lookup.project) return `未找到项目：${selection}\n可以告诉我这个项目的另一个名称或目录。`;
+    this.#settings.setProject(conversationKey, lookup.project.path);
+    return `已切换项目：${lookup.project.name}\n目录：${lookup.project.path}`;
   }
 
   #formatSettings(conversationKey: string): string {
@@ -318,7 +335,7 @@ export class CodexSdkBackend implements AgentBackend {
   }
 
   async respond(request: AgentRequest): Promise<string> {
-    const commandResponse = this.handleControlCommand(request);
+    const commandResponse = request.settings ? undefined : this.handleControlCommand(request);
     if (commandResponse !== undefined) return commandResponse;
 
     const settings = this.#support.resolveSettings(request.conversationKey, request.settings);
